@@ -1,13 +1,15 @@
 # Full-Stack E-Commerce Application
 
-A full-stack e-commerce web application built with **React.js, Node.js, Express.js, MongoDB, Redux Toolkit, and React Query**.
+A full-stack e-commerce web application built with **React.js, Node.js, Express.js, MongoDB, Redux Toolkit, and TanStack React Query**.
 
 The application supports two different roles:
 
-* **Buyer/User** — browse available products
+* **Buyer/User** — browse available products and interact with product listings
 * **Seller** — create, view, update, and delete own products
 
-The project also implements authentication using **JWT access tokens and refresh tokens**, role-based authorization, image uploads using ImageKit, form validation, and protected routes.
+The project implements authentication using **JWT access tokens and refresh tokens**, role-based authorization, protected routes, product management, image uploads using ImageKit, form validation, and API integration.
+
+The application is deployed using **Vercel**.
 
 ---
 
@@ -17,16 +19,18 @@ The project also implements authentication using **JWT access tokens and refresh
 
 * User registration
 * User login
-* Logout
+* User logout
 * JWT-based authentication
 * Short-lived access token
 * Refresh token stored in an HTTP-only cookie
 * Refresh token hashing before storing in the database
+* Refresh token rotation
 * Automatic access token refresh using Axios interceptors
 * Get currently authenticated user
 * Protected routes
 * Public routes
 * Role-based route protection
+* Access token stored in application memory instead of localStorage
 
 ### Buyer Features
 
@@ -37,7 +41,7 @@ The project also implements authentication using **JWT access tokens and refresh
 * Stock availability display
 * Add-to-cart UI
 
-> Cart persistence and order functionality are currently under development.
+> Cart persistence and complete order functionality are currently under development.
 
 ### Seller Features
 
@@ -49,7 +53,7 @@ The project also implements authentication using **JWT access tokens and refresh
 * Product price and currency
 * Add multiple sizes and stock
 * Update own products
-* Delete products
+* Delete own products
 * Seller-only product APIs
 
 ### Product Management
@@ -95,17 +99,23 @@ Maximum **5 images** can be uploaded for a product.
 * Multer
 * Cookie Parser
 * Dotenv
+* CORS
 
 ### Image Storage
 
 * ImageKit
+
+### Deployment
+
+* Vercel
 
 ---
 
 ## 📁 Project Structure
 
 ```text
-anjalikumawat2227-beep-full/
+full/
+
 │
 ├── client/
 │   ├── src/
@@ -136,8 +146,7 @@ anjalikumawat2227-beep-full/
 │   │       └── userBoard/
 │   │
 │   ├── package.json
-│   ├── vite.config.js
-│   └── vercel.json
+│   └── vite.config.js
 │
 └── server/
     ├── src/
@@ -172,13 +181,13 @@ anjalikumawat2227-beep-full/
 
 ## 🔐 Authentication Flow
 
-The application uses two JWT tokens:
+The application uses two JWT tokens.
 
 ### Access Token
 
 * Used to authenticate API requests
 * Sent through the `Authorization` header
-* Expires after 15 minutes
+* Expires after a short period
 * Stored in application memory instead of localStorage
 
 Example:
@@ -191,9 +200,11 @@ Authorization: Bearer <access_token>
 
 * Used to generate a new access token
 * Stored in an HTTP-only cookie
-* Expires after 7 days
 * Hashed before being stored in MongoDB
 * Rotated when a new access token is generated
+* Used to maintain the authenticated session
+
+The refresh cookie uses secure production settings for the deployed frontend and backend.
 
 ### Automatic Token Refresh
 
@@ -203,9 +214,10 @@ When an API request receives a `401` response:
 
 1. Frontend calls the refresh-token API.
 2. Backend verifies the refresh token.
-3. Backend generates a new access token.
-4. Frontend updates the in-memory access token.
-5. The failed request is retried with the new token.
+3. Backend checks the stored hashed refresh token.
+4. Backend generates a new access token and refresh token.
+5. Frontend updates the in-memory access token.
+6. The failed request is retried with the new access token.
 
 ---
 
@@ -220,27 +232,27 @@ seller
 
 ### User
 
-A user can access buyer routes:
+A user can access buyer-related routes such as:
 
 ```text
-/main/buyer
-/main/buyer/cart
-/main/buyer/orders
+/main/products
+/main/cart
+/main/orders
 ```
 
 ### Seller
 
-A seller can access seller routes:
+A seller can access seller-related routes such as:
 
 ```text
-/main/seller
+/main/seller/dashboard
 /main/seller/products
 /main/seller/products/create
 ```
 
-Backend APIs also verify the user's role before allowing seller or buyer-specific operations.
+Backend APIs also verify the user's role before allowing seller-specific product operations.
 
-This means authorization is implemented on both:
+Authorization is implemented at both levels:
 
 * Frontend routes
 * Backend APIs
@@ -249,33 +261,25 @@ This means authorization is implemented on both:
 
 ## 🔗 API Endpoints
 
-Base API:
-
-```text
-/api
-```
-
 ### Authentication APIs
 
-| Method | Endpoint                  | Description                 |
-| ------ | ------------------------- | --------------------------- |
-| POST   | `/api/auth/register`      | Register a new user         |
-| POST   | `/api/auth/login`         | Login user                  |
-| POST   | `/api/auth/refresh-token` | Generate a new access token |
-| GET    | `/api/auth/me`            | Get authenticated user      |
-| GET    | `/api/auth/logout`        | Logout user                 |
-
----
+| Method | Endpoint                  | Description               |
+| ------ | ------------------------- | ------------------------- |
+| POST   | `/api/auth/register`      | Register a new user       |
+| POST   | `/api/auth/login`         | Login user                |
+| POST   | `/api/auth/refresh-token` | Generate new access token |
+| GET    | `/api/auth/me`            | Get authenticated user    |
+| GET    | `/api/auth/logout`        | Logout user               |
 
 ### Product APIs
 
-| Method | Endpoint                    | Access | Description           |
-| ------ | --------------------------- | ------ | --------------------- |
-| POST   | `/api/products/`            | Seller | Create product        |
-| GET    | `/api/products/`            | User   | Get all products      |
-| GET    | `/api/products/my-products` | Seller | Get seller's products |
-| PUT    | `/api/products/:id`         | Seller | Update product        |
-| DELETE | `/api/products/:id`         | Seller | Delete product        |
+| Method | Endpoint                    | Access             | Description           |
+| ------ | --------------------------- | ------------------ | --------------------- |
+| POST   | `/api/products/`            | Seller             | Create product        |
+| GET    | `/api/products/`            | Authenticated User | Get all products      |
+| GET    | `/api/products/my-products` | Seller             | Get seller's products |
+| PUT    | `/api/products/:id`         | Seller             | Update own product    |
+| DELETE | `/api/products/:id`         | Seller             | Delete own product    |
 
 ---
 
@@ -342,7 +346,7 @@ Maximum images: 5
 Maximum file size: 1 MB per file
 ```
 
-Uploaded image URLs are stored in MongoDB with the product document.
+Uploaded ImageKit URLs are stored in MongoDB with the product document.
 
 ---
 
@@ -365,17 +369,17 @@ Login validates:
 
 ### Product Validation
 
-Product creation/update validates:
+Product creation and update validate:
 
-* Title length
-* Description length
+* Title
+* Description
 * Price
 * Currency
 * Sizes
 * Stock
 * Allowed size values
 
-Validation is handled using **express-validator** on the backend.
+Backend validation is handled using **express-validator**.
 
 Frontend forms use **React Hook Form**.
 
@@ -383,7 +387,7 @@ Frontend forms use **React Hook Form**.
 
 ## ⚙️ Installation & Setup
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone <your-repository-url>
@@ -392,7 +396,7 @@ git clone <your-repository-url>
 Move into the project:
 
 ```bash
-cd anjalikumawat2227-beep-full
+cd full
 ```
 
 ---
@@ -435,7 +439,7 @@ Start the backend:
 npm run dev
 ```
 
-The backend server runs on:
+The backend runs locally on:
 
 ```text
 http://localhost:3000
@@ -457,6 +461,8 @@ Install dependencies:
 npm install
 ```
 
+For local development, the frontend uses the Vite proxy to communicate with the backend.
+
 Start the frontend:
 
 ```bash
@@ -469,7 +475,7 @@ The Vite development server will provide the local frontend URL.
 
 ## 🔄 Frontend State Management
 
-The project uses two different approaches depending on the type of data.
+The project uses different tools depending on the type of data.
 
 ### Redux Toolkit
 
@@ -480,8 +486,8 @@ Authentication state includes:
 ```text
 user
 accessToken
-isAuthenticat
-isloading
+isAuthenticate
+isLoading
 error
 ```
 
@@ -495,19 +501,20 @@ createAsyncThunk
 
 ### TanStack React Query
 
-React Query is used for **server-side product data**.
+TanStack React Query is used for **server-side product data**.
 
 It handles:
 
 * Fetching products
-* Seller's products
+* Fetching seller's products
 * Creating products
 * Updating products
 * Deleting products
 * Cache invalidation
 * Loading states
+* Mutation states
 
-After seller product mutations, the product query is invalidated so the latest data can be fetched.
+After seller product mutations, the relevant product queries are invalidated so the latest data can be fetched.
 
 ---
 
@@ -523,7 +530,21 @@ It handles:
 * Access token
 * Automatic token refresh
 
-The frontend uses an in-memory access token rather than storing the access token in localStorage.
+The frontend uses an **in-memory access token** rather than storing the access token in localStorage.
+
+For local development:
+
+```env
+VITE_API_URL=/api
+```
+
+The Vite development server proxies API requests to the local Express server.
+
+For production:
+
+```text
+https://full-kohl.vercel.app/api
+```
 
 ---
 
@@ -541,16 +562,41 @@ Prevents authenticated users from accessing login/register pages.
 
 ### RoleBasedRoute
 
-Checks the authenticated user's role before allowing access to:
-
-* Buyer routes
-* Seller routes
+Checks the authenticated user's role before allowing access to role-specific routes.
 
 Unauthorized users are redirected to:
 
 ```text
 /unauthorized
 ```
+
+---
+
+## 🌍 Live Deployment
+
+### Frontend
+
+```text
+https://client-black-three-24.vercel.app/
+```
+
+### Backend
+
+```text
+https://full-kohl.vercel.app/
+```
+
+The frontend communicates with the deployed Express backend using the production API URL.
+
+The production configuration includes:
+
+* CORS configuration
+* Credential-based requests
+* HTTP-only refresh cookie
+* Secure production cookie
+* Cross-site cookie configuration
+* MongoDB Atlas
+* ImageKit cloud storage
 
 ---
 
@@ -600,26 +646,36 @@ Start the backend using Nodemon.
 
 * User registration
 * User login
-* Logout
+* User logout
 * JWT authentication
-* Refresh token flow
+* Access token and refresh token flow
+* Refresh token rotation
+* HTTP-only refresh cookie
 * Protected routes
+* Public routes
 * Role-based authorization
 * Seller product creation
 * Seller product listing
 * Product update
 * Product deletion
-* Product image upload
+* Seller-only product APIs
+* Product image upload using ImageKit
 * Product validation
 * Buyer product listing
+* Product image carousel
 * Product size selection
+* Stock availability
 * React Query integration
 * Redux Toolkit authentication state
+* Axios interceptors
+* Automatic access token refresh
+* MongoDB Atlas integration
+* Production deployment using Vercel
 
 ### In Progress
 
-* Cart functionality
-* Order functionality
+* Persistent cart functionality
+* Complete order functionality
 * Buyer checkout flow
 * Seller dashboard statistics
 * Additional UI improvements
@@ -637,10 +693,8 @@ Start the backend using Nodemon.
 * Product categories
 * Pagination
 * Seller dashboard analytics
-* Better error handling
 * Loading skeletons
-* Responsive UI improvements
-* Production deployment configuration
+* Additional responsive UI improvements
 
 ---
 
@@ -658,7 +712,8 @@ Built as a full-stack learning project to practice:
 * Authentication
 * Authorization
 * Redux Toolkit
-* React Query
+* TanStack React Query
 * File uploads
 * API integration
 * Role-based application architecture
+* Full-stack deployment
