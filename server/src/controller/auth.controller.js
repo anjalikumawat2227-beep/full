@@ -3,6 +3,15 @@ import bcrypt from "bcryptjs"
 import cookie from "cookie-parser"
 import { createAccessToken, createRefreshToken, hashRefreshToken, verifyRefreshToken } from "../utils/auth.token.js"
 
+const isProduction = process.env.NODE_ENV === "production";
+
+const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/"
+};
+
 export async function register(req,res){
 const {name,email,password,confirmPassword,role}= req.body
 
@@ -48,9 +57,7 @@ await userModel.findByIdAndUpdate(user._id,
     refreshToken:refreshTokenHash
   })
 
-res.cookie("refreshtoken",refreshToken ,{
-    httpOnly: true, 
-})
+res.cookie("refreshtoken",refreshToken,cookieOptions)
 
 res.status(201).json({
     success:true,
@@ -101,9 +108,7 @@ export  async function login(req, res){
 
   await userModel.findOneAndUpdate({ email }, { refreshToken:refreshTokenHash});
   
-  res.cookie("refreshtoken", refreshToken, {
-    httpOnly: true,
-  });
+  res.cookie("refreshtoken", refreshToken, cookieOptions);
 
   res.status(200).json({
     success: true,
@@ -122,7 +127,7 @@ export  async function login(req, res){
 
 export async function refresh(req,res){
 
-    const refreshToken = req.cookies.refreshtoken
+    const refreshToken = req.cookies.refreshtoken;
 
     if (!refreshToken) {
     return res.status(401).json({
@@ -141,7 +146,7 @@ export async function refresh(req,res){
         await userModel.findByIdAndUpdate(user._id,{refreshToken:null})
         return res.status(401).json({
         success: false,
-        message: "Invalid refresh Token .",
+        message: "Invalid refresh Token.",
       });
     }
 
@@ -151,9 +156,7 @@ export async function refresh(req,res){
 
     await userModel.findByIdAndUpdate(user._id,{refreshToken:newRefreshTokenHash})
 
-    res.cookie("refreshtoken",newRefreshToken,{
-          httpOnly: true,
-    })
+    res.cookie("refreshtoken",newRefreshToken,cookieOptions)
 
     res.status(200).json({
         success:true,
@@ -204,9 +207,7 @@ export async function logoutController(req,res){
      let user = await userModel.findById(decoded.id)
 
 await userModel.findByIdAndUpdate(user._id,{refreshToken:null})
-res.clearCookie("refreshtoken",{
-  httpOnly:true
-})
+res.clearCookie("refreshtoken",cookieOptions)
 
 return res.status(200).json({
   sucess:true,

@@ -5,12 +5,16 @@ import productsRouter from "../routers/product.route.js"
 import cors from "cors";
 const app = express()
 
-app.use(express.json())
-app.use(cookieParser())
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: [
+        "http://localhost:5173",
+        "https://client-black-three-24.vercel.app"
+    ],
     credentials: true
 }));
+
+app.use(express.json())
+app.use(cookieParser())
 
 app.get("/", (req, res) => {
     res.json({
